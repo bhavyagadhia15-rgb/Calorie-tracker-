@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="description" content="Simple Indian food calorie and protein tracker">
+<link rel="manifest" href="manifest.webmanifest">
+<title>My Calorie Tracker</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e5e9f0;--accent:#111827;--ok:#16834b;--danger:#c53030}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--accent);color:white;padding:20px 16px 18px;position:sticky;top:0;z-index:5}
+h1{font-size:22px;margin:0 0 4px}.sub{opacity:.75;font-size:13px}
+main{max-width:820px;margin:auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px #00000008}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+input,select,button{font:inherit;border-radius:10px;border:1px solid var(--line);padding:10px 11px;background:white}
+input,select{min-width:0}.grow{flex:1;min-width:150px}
+button{cursor:pointer;background:#fff}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button.danger{color:var(--danger)}
+h2{font-size:17px;margin:0 0 12px}.small{font-size:12px;color:var(--muted)}.muted{color:var(--muted)}
+.progress{height:12px;background:#edf0f5;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--ok);width:0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f8fafc;border-radius:12px;padding:12px}.stat b{font-size:20px;display:block}
+.meal{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.meal:first-child{border-top:0;padding-top:0;margin-top:0}
+.item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}.item:last-child{border-bottom:0}
+.pill{font-size:12px;background:#eef2f7;padding:4px 7px;border-radius:999px;white-space:nowrap}
+dialog{border:0;border-radius:18px;width:min(720px,94vw);padding:0;box-shadow:0 15px 50px #0004}dialog::backdrop{background:#0007}.modal{padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.recipe{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.recipe b{display:block}.recipe button{margin-top:7px}
+.notice{background:#fff7df;border:1px solid #f0d98a;padding:10px;border-radius:10px;font-size:12px}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:12px 0 30px}
+@media(min-width:650px){.stats{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>My Calorie Tracker</h1><div class="sub">Calories + protein • Indian meals • works offline</div></header>
+<main>
+<section class="card">
+ <div class="row between"><h2>Today</h2><input id="date" type="date"></div>
+ <div class="stats" style="margin-top:10px">
+  <div class="stat"><span class="small">Calories</span><b id="cal">0</b><span class="small" id="calTarget">/ 2500 kcal</span></div>
+  <div class="stat"><span class="small">Protein</span><b id="pro">0 g</b><span class="small" id="proTarget">/ 120 g</span></div>
+  <div class="stat"><span class="small">Remaining</span><b id="remain">2500</b></div>
+  <div class="stat"><span class="small">Meals</span><b id="count">0</b></div>
+ </div>
+ <div style="margin-top:12px" class="progress"><div class="bar" id="bar"></div></div>
+</section>
+
+<section class="card">
+ <h2>Daily targets</h2>
+ <div class="grid">
+  <label class="small">Calories<input id="targetCal" type="number" min="0" step="50"></label>
+  <label class="small">Protein (g)<input id="targetPro" type="number" min="0" step="5"></label>
+ </div>
+ <div class="row" style="margin-top:8px"><button class="primary" onclick="saveTargets()">Save targets</button><button onclick="installApp()" id="installBtn" hidden>Install app</button></div>
+</section>
+
+<section class="card">
+ <h2>Add food</h2>
+ <div class="grid">
+  <select id="meal"><option>Breakfast</option><option>Lunch</option><option>Snacks</option><option>Dinner</option></select>
+  <select id="food"></select>
+  <input id="qty" type="number" min="0" step="0.1" placeholder="Quantity">
+  <select id="unit"><option value="g">g</option><option value="ml">ml</option></select>
+ </div>
+ <div class="small" id="foodInfo" style="margin-top:8px"></div>
+ <button class="primary" style="margin-top:9px" onclick="addFood()">Add food</button>
+</section>
+
+<section class="card">
+ <h2>Quick Indian meals</h2>
+ <div id="recipes"></div>
+</section>
+
+<section class="card">
+ <div class="row between"><h2>Today's log</h2><button class="danger" onclick="clearDay()">Clear day</button></div>
+ <div id="log"></div>
+</section>
+
+<section class="card">
+ <h2>My recipes <span class="small">(up to 10)</span></h2>
+ <button class="primary" onclick="openRecipe()">Create recipe</button>
+ <div id="myRecipes"></div>
+</section>
+
+<section class="card">
+ <h2>Backup & restore</h2>
+ <div class="row">
+  <button onclick="exportData()">Export backup</button>
+  <button onclick="document.getElementById('importFile').click()">Import backup</button>
+  <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)">
+ </div>
+ <p class="small">Your logs and recipes are stored in this browser. Export a backup before changing phones or clearing browser data.</p>
+</section>
+<footer>Nutrition values are estimates. For packaged foods, use the nutrition label for your exact brand.</footer>
+</main>
+
+<dialog id="recipeDialog">
+<div class="modal">
+ <div class="row between"><h2>Create / edit recipe</h2><button onclick="recipeDialog.close()">✕</button></div>
+ <input id="recipeName" class="grow" placeholder="Recipe name" style="width:100%">
+ <div id="ingredients" style="margin-top:10px"></div>
+ <div class="row" style="margin-top:8px"><button onclick="addIngredientRow()">+ Ingredient</button><label class="small">Servings<input id="recipeServings" type="number" min="1" value="1" style="width:90px"></label></div>
+ <div id="recipeTotals" class="notice" style="margin-top:10px"></div>
+ <button class="primary" style="margin-top:10px" onclick="saveRecipe()">Save recipe</button>
+</div>
+</dialog>
+
+<script>
+const FOODS={
+"Oats":[389,16.9,"g"],"Banana":[89,1.1,"g"],"Apple":[52,.3,"g"],"Milk":[61,3.2,"ml"],
+"Whey isolate":[370,83,"g"],"Peanut butter":[588,25.1,"g"],"Almonds":[579,21.2,"g"],"Paneer":[265,18.3,"g"],
+"Egg":[143,12.6,"g"],"Chicken breast":[165,31,"g"],"Rice cooked":[130,2.7,"g"],"Dal cooked":[116,9,"g"],
+"Roti/chapati":[297,9.6,"g"],"Cooking oil":[884,0,"g"],"Ghee":[900,0,"g"],"Cocoa powder":[228,19.6,"g"],
+"Capsicum":[31,1,"g"],"Carrot":[41,.9,"g"],"Onion":[40,1.1,"g"],"Tomato":[18,.9,"g"],"Potato":[77,2,"g"],
+"Green peas":[81,5.4,"g"],"Curd":[61,3.5,"g"],"Besan":[387,22,"g"],"Poha dry":[350,7,"g"],
+"Suji/rava":[360,12,"g"],"Idli batter":[150,5,"g"],"Atta":[340,13,"g"],"Rajma cooked":[127,8.7,"g"],
+"Chickpeas cooked":[164,8.9,"g"],"Spinach":[23,2.9,"g"],"Mixed vegetables":[65,2.5,"g"],
+"Peanuts":[567,25.8,"g"],"Salt/spices":[0,0,"g"]
+};
+const RECIPES={
+"Poha":[["Poha dry",70],["Peanuts",10],["Onion",40],["Green peas",30],["Cooking oil",8]],
+"Upma":[["Suji/rava",70],["Onion",40],["Mixed vegetables",50],["Cooking oil",8],["Peanuts",10]],
+"2 Egg Omelette":[["Egg",100],["Onion",20],["Capsicum",20],["Cooking oil",5]],
+"Idli (2)":[["Idli batter",160]],
+"Masala Dosa":[["Idli batter",150],["Potato",100],["Onion",30],["Cooking oil",10]],
+"Aloo Paratha":[["Atta",70],["Potato",100],["Cooking oil",8]],
+"Thepla (2 small)":[["Atta",70],["Cooking oil",8],["Curd",30],["Spinach",30]],
+"Dal Rice":[["Dal cooked",200],["Rice cooked",200],["Ghee",5]],
+"Dal Tadka + Rice":[["Dal cooked",220],["Rice cooked",200],["Ghee",10],["Onion",20],["Tomato",30]],
+"Rajma Rice":[["Rajma cooked",200],["Rice cooked",200],["Cooking oil",8],["Onion",30],["Tomato",50]],
+"Chole Rice":[["Chickpeas cooked",200],["Rice cooked",200],["Cooking oil",8],["Onion",30],["Tomato",50]],
+"3 Roti + Dal":[["Roti/chapati",105],["Dal cooked",200],["Ghee",5]],
+"Khichdi":[["Rice cooked",150],["Dal cooked",150],["Ghee",8],["Mixed vegetables",50]],
+"Vegetable Pulao":[["Rice cooked",250],["Mixed vegetables",100],["Cooking oil",8]],
+"Pav Bhaji":[["Potato",120],["Mixed vegetables",120],["Cooking oil",12],["Roti/chapati",60]],
+"Paneer Capsicum Carrot":[["Paneer",150],["Capsicum",100],["Carrot",75],["Ghee",10],["Onion",40]],
+"Paneer + Roti":[["Paneer",150],["Roti/chapati",70],["Cooking oil",8],["Onion",30],["Tomato",50]],
+"Palak Paneer + Roti":[["Paneer",130],["Spinach",150],["Cooking oil",8],["Roti/chapati",70]],
+"Chicken Curry + Rice":[["Chicken breast",180],["Rice cooked",200],["Cooking oil",10],["Onion",40],["Tomato",60]],
+"Chicken Rice Bowl":[["Chicken breast",180],["Rice cooked",200],["Mixed vegetables",80],["Cooking oil",8]],
+"Peanut Butter Banana":[["Banana",120],["Peanut butter",25]],
+"Overnight Oats":[["Oats",60],["Milk",200],["Banana",100],["Peanut butter",15],["Cocoa powder",5],["Whey isolate",25]]
+};
+let data=JSON.parse(localStorage.getItem("mctData")||'{"targets":{"cal":2500,"pro":120},"days":{},"custom":[]}');
+let editIndex=null, deferredPrompt=null;
+const $=id=>document.getElementById(id);
+function calc(ings){let c=0,p=0;for(const [f,q] of ings){let v=FOODS[f];if(v){c+=v[0]*q/100;p+=v[1]*q/100}}return [c,p]}
+function save(){localStorage.setItem("mctData",JSON.stringify(data))}
+function key(){return $("date").value}
+function day(){return data.days[key()]||(data.days[key()]=[])}
+function init(){
+ $("date").value=new Date().toISOString().slice(0,10);
+ $("targetCal").value=data.targets.cal;$("targetPro").value=data.targets.pro;
+ for(const f in FOODS){let o=document.createElement("option");o.value=f;o.textContent=f;$("food").appendChild(o)}
+ $("food").onchange=foodInfo;$("qty").value=100;foodInfo();
+ renderRecipes();renderCustom();renderLog();
+}
+function foodInfo(){let f=$("food").value,v=FOODS[f];$("unit").value=v?.[2]||"g";$("foodInfo").textContent=v?`${v[0]} kcal • ${v[1]} g protein per 100 ${v[2]}`:""}
+$("date").addEventListener("change",renderLog);
+function addFood(){let f=$("food").value,q=+ $("qty").value;if(!f||!q)return;day().push({type:"food",meal:$("meal").value,name:f,qty:q,cal:FOODS[f][0]*q/100,pro:FOODS[f][1]*q/100});save();renderLog()}
+function addRecipe(name,meal="Dinner"){let ings=RECIPES[name]||data.custom.find(x=>x.name===name)?.ings;if(!ings)return;let [c,p]=calc(ings);let custom=data.custom.find(x=>x.name===name);let servings=custom?.servings||1;c/=servings;p/=servings;day().push({type:"recipe",meal,name,qty:1,cal:c,pro:p});save();renderLog()}
+function renderRecipes(){let el=$("recipes");el.innerHTML="";for(const n in RECIPES){let [c,p]=calc(RECIPES[n]);let d=document.createElement("div");d.className="recipe";d.innerHTML=`<b>${n}</b><span class="small">${Math.round(c)} kcal • ${p.toFixed(1)}g protein</span><div class="row"><select id="m_${CSS.escape(n)}"><option>Breakfast</option><option>Lunch</option><option>Snacks</option><option selected>Dinner</option></select><button onclick="addRecipe(${JSON.stringify(n)},document.getElementById('m_'+CSS.escape(${JSON.stringify(n)})).value)">Add</button></div>`;el.appendChild(d)}}
+function renderCustom(){let el=$("myRecipes");el.innerHTML="";if(!data.custom.length){el.innerHTML='<p class="small">No personal recipes yet.</p>';return}data.custom.forEach((r,i)=>{let [c,p]=calc(r.ings);c/=r.servings;p/=r.servings;let d=document.createElement("div");d.className="recipe";d.innerHTML=`<b>${r.name}</b><span class="small">${Math.round(c)} kcal • ${p.toFixed(1)}g protein per serving</span><div class="row"><button onclick="addRecipe(${JSON.stringify(r.name)})">Add</button><button onclick="openRecipe(${i})">Edit</button><button class="danger" onclick="deleteRecipe(${i})">Delete</button></div>`;el.appendChild(d)})}
+function renderLog(){
+ let groups={Breakfast:[],Lunch:[],Snacks:[],Dinner:[]},totalC=0,totalP=0;
+ day().forEach((x,i)=>{(groups[x.meal]||groups.Dinner).push({...x,i});totalC+=x.cal;totalP+=x.pro});
+ $("cal").textContent=Math.round(totalC);$("pro").textContent=totalP.toFixed(1)+" g";$("calTarget").textContent="/ "+data.targets.cal+" kcal";$("proTarget").textContent="/ "+data.targets.pro+" g";$("remain").textContent=Math.max(0,Math.round(data.targets.cal-totalC));$("count").textContent=day().length;$("bar").style.width=Math.min(100,totalC/data.targets.cal*100)+"%";
+ let html="";for(const m of Object.keys(groups)){let arr=groups[m];html+=`<div class="meal"><div class="row between"><b>${m}</b><span class="pill">${Math.round(arr.reduce((a,x)=>a+x.cal,0))} kcal</span></div>`;if(!arr.length)html+='<div class="small">Nothing added.</div>';arr.forEach(x=>html+=`<div class="item"><span>${x.name} ${x.type==="food"?`(${x.qty}${FOODS[x.name]?.[2]||"g"})`:"(1 serving)"}</span><span>${Math.round(x.cal)} kcal <button onclick="removeItem(${x.i})">✕</button></span></div>`);html+="</div>"}$("log").innerHTML=html;
+}
+function removeItem(i){day().splice(i,1);save();renderLog()}
+function clearDay(){if(confirm("Clear all food logged for this day?")){data.days[key()]=[];save();renderLog()}}
+function saveTargets(){data.targets.cal=+$("targetCal").value||2500;data.targets.pro=+$("targetPro").value||120;save();renderLog()}
+function openRecipe(i=null){editIndex=i;$("recipeName").value=i==null?"":data.custom[i].name;$("recipeServings").value=i==null?1:data.custom[i].servings;$("ingredients").innerHTML="";(i==null?[["Oats",60]]:data.custom[i].ings).forEach(x=>addIngredientRow(x[0],x[1]));recipeDialog.showModal();recipeTotals()}
+function addIngredientRow(f="Oats",q=50){let d=document.createElement("div");d.className="row ing";d.style.marginBottom="7px";let s=document.createElement("select");s.className="grow";for(const n in FOODS)s.add(new Option(n,n));s.value=f;let inp=document.createElement("input");inp.type="number";inp.value=q;inp.min=0;inp.step=.1;inp.style.width="100px";let b=document.createElement("button");b.textContent="✕";b.onclick=()=>{d.remove();recipeTotals()};s.onchange=recipeTotals;inp.oninput=recipeTotals;d.append(s,inp,b);$("ingredients").appendChild(d)}
+function recipeTotals(){let ings=[...document.querySelectorAll(".ing")].map(r=>[r.children[0].value,+r.children[1].value]);let [c,p]=calc(ings),s=+$("recipeServings").value||1;$("recipeTotals").textContent=`Whole recipe: ${Math.round(c)} kcal • ${p.toFixed(1)}g protein | Per serving: ${Math.round(c/s)} kcal • ${(p/s).toFixed(1)}g protein`}
+$("recipeServings").oninput=recipeTotals;
+function saveRecipe(){let name=$("recipeName").value.trim();let ings=[...document.querySelectorAll(".ing")].map(r=>[r.children[0].value,+r.children[1].value]).filter(x=>x[1]>0);let servings=Math.max(1,+$("recipeServings").value||1);if(!name||!ings.length)return alert("Enter a recipe name and at least one ingredient.");if(editIndex==null&&data.custom.length>=10)return alert("You can save up to 10 personal recipes.");let obj={name,ings,servings};if(editIndex==null)data.custom.push(obj);else data.custom[editIndex]=obj;save();recipeDialog.close();renderCustom()}
+function deleteRecipe(i){if(confirm("Delete this recipe?")){data.custom.splice(i,1);save();renderCustom()}}
+function exportData(){let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="my-calorie-tracker-backup.json";a.click();URL.revokeObjectURL(a.href)}
+function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.targets||!x.days||!Array.isArray(x.custom))throw 0;data=x;save();location.reload()}catch{alert("That backup file is not valid.")}};r.readAsText(f)}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").hidden=false});
+async function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+init();
+</script>
+</body></html>
